@@ -1,0 +1,8 @@
+#labelEditor { 
+    background-color:white;
+    z-index:9999;
+    position: absolute;
+    width: 240px;
+    height: 135px;
+    padding: 0.4em;
+}

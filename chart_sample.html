@@ -1,0 +1,80 @@
+<html>
+<body>
+</body>
+<script src="jquery.min.js"></script>
+<script src="highcharts.js"></script>
+<script>
+$(document).ready(function(){
+    function renderChart(ctx){
+        return new Highcharts.Chart({
+            chart: {
+                type: ctx.type,
+                //グラフ表示させるdivをidで設定
+                renderTo: ctx.render_to,
+                //グラフ右側のマージンを設定
+                marginRight: 140,
+                //グラフ左側のマージンを設定
+                marginBottom: 40
+            },
+            //グラフのタイトルを設定
+            title: {
+                text:  ctx.title
+            },
+            //x軸のタイトルを設定
+            xAxis: {
+                title: {
+                    text: ctx.x_text
+                },
+                //x軸に表示するデータを設定
+                categories:ctx.categories,
+                //小数点刻みにしない
+                //allowDecimals: false
+            },
+            //y軸の設定
+            yAxis: {
+                title: {
+                    //タイトル名の設定
+                    text: ctx.y_text,
+                    style: {
+                       //タイトルの色を設定
+                       color: '#4572A7',
+                    }
+                }
+            },
+            tooltip: {
+                useHTML:true,
+                formatter: function() {
+                    return "<span>"+this.y+"</span>";
+                }
+            },
+            //凡例の設定
+            legend: {
+                //凡例が縦に並ぶ
+                layout: 'vertical',
+                //凡例の横位置
+                align: 'right',
+                //凡例の縦位置
+                verticalAlign: 'top',
+                x: -10,
+                y: 100,
+                borderWidth: 0
+            },
+            //グラフデータの設定
+            series: ctx.data
+        });
+    }
+
+    $('body').append('<div id="chart"></div>');
+
+    var chart = renderChart({
+        render_to:'chart',
+        x_text:'Date',
+        y_text:'Stats Keys',
+        categories:["a","b","c","d"],
+        data:[{name:"a",data:[1,2,3,4]},{name:"b",data:[9,5,4,5]}]
+    });
+    console.log(headers);
+    console.log(data);
+});
+</script>
+</html>
