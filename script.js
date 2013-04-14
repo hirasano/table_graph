@@ -1,6 +1,6 @@
 $(document).ready(function(){
     $('body').prepend('<div id="chart"></div><div id="export"><ul><li><a href="" id="show_csv">csvで表示</a></li><li><a href="" id="label_mngr">ラベル</a></li></ul></div>');
-    $('body').prepend('<div id="labelEditor" style="display:none" class="ui-widget-content ui-corner-all"></div>');
+    $('body').prepend('<div id="labelEditor" style="display:none" class="ui-widget-content ui-corner-all"><div id="innerLabelEditor"></div><a href="" id="updateLabel">更新</a></div>');
 
 
     /**
@@ -175,6 +175,7 @@ $(document).ready(function(){
     // convert from raw key data to label
     label_info && t.setLabels(label_info.labels);
 
+    // Render chart
     var chart = renderChart({
         render_to:'chart',
         x_text:'Date',
@@ -185,10 +186,27 @@ $(document).ready(function(){
 
     function bindUI(){
         $('a#label_mngr').on('click',function(e){
-            var elm = $('#labelEditor');
-            elm.html('<span>hello world</span>');
+            var elm = $('#labelEditor'),
+                editor = elm.find('div#innerLabelEditor'),
+                html = '';
+
+            editor.html(html);
             elm.toggle('slide',{},500);
 
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        });
+        $('a#show_csv').on('click',function(e){
+            opened = window.open('about:blank');
+            var doc = opened.document;
+            doc.writeln('"key","label","'+t.categories.join('","')+'"<br>');
+            for(var i in t.series){
+                doc.writeln('"'+t.series[i].key+'","'+t.series[i].name+'","'+t.series[i].data.join('","')+'"<br>');
+            }
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        });
+        $('a#updateLabel').on('click',function(e){
             e.stopImmediatePropagation();
             e.preventDefault();
         });
