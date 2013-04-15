@@ -19,9 +19,10 @@ $(document).ready(function(){
                 //グラフ表示させるdivをidで設定
                 renderTo: ctx.render_to,
                 //グラフ右側のマージンを設定
-                marginRight: 140,
+                marginRight: 40,
                 //グラフ左側のマージンを設定
-                marginBottom: 40
+                marginBottom: 100,
+                zoomType: 'x'
             },
             //グラフのタイトルを設定
             title: {
@@ -57,13 +58,13 @@ $(document).ready(function(){
             //凡例の設定
             legend: {
                 //凡例が縦に並ぶ
-                layout: 'vertical',
+                layout: 'horizontal',
                 //凡例の横位置
-                align: 'right',
+                align: 'center',
                 //凡例の縦位置
-                verticalAlign: 'top',
-                x: -10,
-                y: 100,
+                verticalAlign: 'bottom',
+                x: 0,
+                y: 0,
                 borderWidth: 0
             },
             //グラフデータの設定
