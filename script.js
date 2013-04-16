@@ -1,6 +1,7 @@
 $(document).ready(function(){
-    $('body').prepend('<div id="chart"></div><div id="export"><ul><li><a href="" id="show_csv">csvで表示</a></li><li><a href="" id="label_mngr">ラベル</a></li></ul></div>');
-    $('body').prepend('<div id="labelEditor" style="display:none" class="ui-widget-content ui-corner-all"><div id="innerLabelEditor"></div><a href="" id="updateLabel">更新</a></div>');
+    $('div.yui-content div#line embed').remove();
+    $('div.yui-content div#line').prepend('<div><div id="highchart"></div><div id="export"><ul><li><a href="" id="show_csv">csvで表示</a></li><li><a href="" id="label_mngr">ラベル</a></li></ul></div></div>');
+    $('div.yui-content div#line').prepend('<div id="labelEditor" style="display:none" class="ui-widget-content ui-corner-all"><div id="innerLabelEditor"></div><a href="" id="updateLabel">更新</a></div>');
 
 
     /**
@@ -18,11 +19,8 @@ $(document).ready(function(){
                 type: ctx.type,
                 //グラフ表示させるdivをidで設定
                 renderTo: ctx.render_to,
-                //グラフ右側のマージンを設定
-                marginRight: 40,
-                //グラフ左側のマージンを設定
-                marginBottom: 100,
-                zoomType: 'x'
+                zoomType: 'x',
+                height:600
             },
             //グラフのタイトルを設定
             title: {
@@ -47,7 +45,8 @@ $(document).ready(function(){
                        //タイトルの色を設定
                        color: '#4572A7',
                     }
-                }
+                },
+                min:0
             },
             tooltip: {
                 useHTML:true,
@@ -68,7 +67,17 @@ $(document).ready(function(){
                 borderWidth: 0
             },
             //グラフデータの設定
-            series: ctx.data
+            series: ctx.data,
+
+            plotOptions: {
+                series: {
+                    events: {
+                        legendItemClick: function(event) {
+                            ctx.visibleUpdated && ctx.visibleUpdated(event.target.userOptions.key, event.target.visible);
+                        }
+                    }
+                }
+            }
         });
     }
 
@@ -80,10 +89,13 @@ $(document).ready(function(){
         this.series = [];
         this.categories = [];
         this.keyCells = {};
+        this.table = table;
 
         // private methods
         function parse(){
-            var trs = table.find("tr"), series = [], categories = [];
+            var firstTh = table.find("tr th").get(0),
+                trs = table.find("tr"), series = [], categories = [];
+            $(firstTh).html('<input type="checkbox">');
             trs.each(function(){
                 var tr = $(this), key, line = [], is_header = false;
                 tr.children().each(function(){
@@ -115,6 +127,22 @@ $(document).ready(function(){
                     console.log(chkbox.attr('checked'));
                     chkbox.attr('checked') ? chkbox.attr('checked',false) : chkbox.attr('checked',true);
                     opt.checked.call(_this,tr.attr('data-key'),chkbox.attr('checked'));
+                } else if(tr.attr('data-trtype') == 'header'){
+                    var chkbox = $(e.currentTarget),
+                        checked = !chkbox.attr('checked'),
+                        trs = table.find('tr');
+                    chkbox.attr('checked', checked);
+                    trs.each(function(){
+                        var tr = $(this);
+                        if(tr.attr('data-trtype')=='data'){
+                            var chkbox = tr.closest('input[type="checkbox"]');
+                            if(chkbox){
+                               checked && chkbox.attr('checked',true);
+                               !checked && chkbox.removeAttr('checked');
+                            }
+                        }
+                    });
+                    opt.checkedAll && opt.checkedAll.call(_this,checked);
                 } 
             });
         }
@@ -135,6 +163,13 @@ $(document).ready(function(){
                 var key = series[i].name;
                 label_info[key] && (series[i].name = label_info[key]);
             }
+        },
+        updateChecked:function(key, checked){
+            var table = this.table;
+                tr = table.find('tr[data-key="'+checked+'"]').get(0),
+                chkbox = tr.find('input[type=checkbox]').get(0);
+            chkbox.attr('checked',checked);
+          
         }
     };
 
@@ -170,6 +205,12 @@ $(document).ready(function(){
                     return;
                 }
             }
+        },
+        checkedAll:function(checked){
+            var method = checked ? 'show' : 'hide';
+            for(var i in chart.series){
+                checked ? chart.series[i].show() : chart.series[i].hide();
+            }
         }
     });
 
@@ -178,11 +219,14 @@ $(document).ready(function(){
 
     // Render chart
     var chart = renderChart({
-        render_to:'chart',
+        render_to:'highchart',
         x_text:'Date',
         y_text:'Calls',
         categories:t.categories,
-        data:t.series
+        data:t.series,
+        visibleUpdated:function(key,visible){
+            t.updateChecked.call(t,key,visible);
+        }
     });
 
     function bindUI(){
