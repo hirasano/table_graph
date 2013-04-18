@@ -95,7 +95,7 @@ $(document).ready(function(){
         function parse(){
             var firstTh = table.find("tr th").get(0),
                 trs = table.find("tr"), series = [], categories = [];
-            $(firstTh).html('<input type="checkbox">');
+            $(firstTh).html('<input type="checkbox" checked>');
             trs.each(function(){
                 var tr = $(this), key, line = [], is_header = false;
                 tr.children().each(function(){
@@ -103,7 +103,7 @@ $(document).ready(function(){
                     if(cell.is(opt.key)){
                         key = cell.text();
                         tr.attr('data-key',key);
-                        cell.html('<input type="checkbox" checked><span data-key="'+key+'">'+key+'</span>');
+                        cell.html('<input type="checkbox" data-key="'+key+'" checked><span>'+key+'</span>');
                         _this.keyCells[key] = cell;
                     } else if(cell.is(opt.value)){
                         line.push(parseInt(cell.text()));
@@ -120,30 +120,23 @@ $(document).ready(function(){
         }
 
         function bind(){
-            table.on('click','tr input[type=checkbox]',function(e){
-                var tr = $(e.currentTarget).closest('tr');
-                if(tr.attr('data-trtype') == 'data' && opt.checked){
-                    var chkbox = $(e.currentTarget);
-                    console.log(chkbox.attr('checked'));
-                    chkbox.attr('checked') ? chkbox.attr('checked',false) : chkbox.attr('checked',true);
-                    opt.checked.call(_this,tr.attr('data-key'),chkbox.attr('checked'));
-                } else if(tr.attr('data-trtype') == 'header'){
-                    var chkbox = $(e.currentTarget),
-                        checked = !chkbox.attr('checked'),
-                        trs = table.find('tr');
-                    chkbox.attr('checked', checked);
-                    trs.each(function(){
-                        var tr = $(this);
-                        if(tr.attr('data-trtype')=='data'){
-                            var chkbox = tr.closest('input[type="checkbox"]');
-                            if(chkbox){
-                               checked && chkbox.attr('checked',true);
-                               !checked && chkbox.removeAttr('checked');
-                            }
-                        }
-                    });
-                    opt.checkedAll && opt.checkedAll.call(_this,checked);
-                } 
+            table.on('click','tr[data-trtype="data"] input[type=checkbox]',function(e){
+                var chkbox = $(e.currentTarget);
+                chkbox.prop('checked', chkbox.prop('checked'));
+
+                var chkboxes = table.find('tr[data-trtype="data"] input[type=checkbox]:checked');
+
+                // if all is checked, check all-checkbox.
+                var checked = chkboxes.length == _this.series.length;
+                table.find('tr[data-trtype="header"] input[type=checkbox]').prop('checked', checked);
+
+                opt.checked.call(_this,chkbox.attr('data-key'),chkbox.prop('checked'));
+            });
+            table.on('click','tr[data-trtype="header"] input[type=checkbox]',function(e){
+                var chkbox = $(e.currentTarget),
+                    checked = this.checked;
+                table.find('tr input[type=checkbox]').prop('checked', checked);
+                opt.checkedAll && opt.checkedAll.call(_this,checked);
             });
         }
 
@@ -209,7 +202,9 @@ $(document).ready(function(){
         checkedAll:function(checked){
             var method = checked ? 'show' : 'hide';
             for(var i in chart.series){
-                checked ? chart.series[i].show() : chart.series[i].hide();
+                setTimeout(function(i,checked){
+                    checked ? chart.series[i].show() : chart.series[i].hide();
+                },0,i,checked);
             }
         }
     });
