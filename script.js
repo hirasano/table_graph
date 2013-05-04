@@ -1,7 +1,6 @@
 $(document).ready(function(){
     $('div.yui-content div#line embed').remove();
-    $('div.yui-content div#line').prepend('<div><div id="highchart"></div><div id="export"><ul><li><a href="" id="show_csv">csvで表示</a></li><li><a href="" id="label_mngr">ラベル</a></li></ul></div></div>');
-    $('div.yui-content div#line').prepend('<div id="labelEditor" style="display:none" class="ui-widget-content ui-corner-all"><div id="innerLabelEditor"></div><a href="" id="updateLabel">更新</a></div>');
+    $('div.yui-content div#line').prepend('<div><div id="highchart"></div><div id="export"><ul><li><a href="" id="show_csv">csvで表示</a></li></ul></div></div>');
 
 
     /**
@@ -103,8 +102,9 @@ $(document).ready(function(){
                     if(cell.is(opt.key)){
                         key = cell.text();
                         tr.attr('data-key',key);
-                        cell.html('<input type="checkbox" data-key="'+key+'" checked><span>'+key+'</span>');
-                        _this.keyCells[key] = cell;
+                        cell.addClass('view');
+                        cell.html('<div class="tdframe"><input type="checkbox" id="__key-'+key+'" data-key="'+key+'" checked><div class="view"><a href="#" class="label link">'+key+'</a></div><div class="edit"><input type="text"></div></div>');
+                        _this.keyCells[key] = {cell:cell,key:key};
                     } else if(cell.is(opt.value)){
                         line.push(parseInt(cell.text()));
                     } else if(cell.is(opt.headerKey)){
@@ -117,6 +117,22 @@ $(document).ready(function(){
             });
             _this.series = series;
             _this.categories = categories;
+        }
+
+        function updateLabel(td, key, val){
+            var key = $(td.find('input[type=checkbox]:first')).attr('data-key'),
+                val = $(td.find('input[type=text]:first')).prop('value'),
+                series = chart.series;
+            for(var i in series){
+                if(series[i].userOptions.key == key){
+                    series[i].userOptions.name = val;
+                    series[i].update(series[i].userOptions, true);
+                }
+            }
+            labelApi.put('1', key, val);
+            $(td.find('a.label:first')).text(val);
+            td.removeClass('edit');
+            td.addClass('view');
         }
 
         function bind(){
@@ -138,6 +154,29 @@ $(document).ready(function(){
                 table.find('tr input[type=checkbox]').prop('checked', checked);
                 opt.checkedAll && opt.checkedAll.call(_this,checked);
             });
+            table.on('click','div.view a',function(e){
+                e.stopImmediatePropagation();
+                e.preventDefault();
+
+                var td = $(e.currentTarget).parents('td');
+                td.removeClass('view');
+                td.addClass('edit');
+
+                var textInput = td.find('input[type=text]:first');
+                textInput.focus();
+                textInput.unbind('keydown');
+                textInput.keydown(function(e){
+                    if(e.keyCode==13){
+                        updateLabel($(e.currentTarget).parents('td'));
+                    }
+                });
+            });
+            table.on('click','div.edit a',function(e){
+                e.stopImmediatePropagation();
+                e.preventDefault();
+
+                updateLabel($(e.currentTarget).parents('td'));
+            });
         }
 
         parse();
@@ -147,9 +186,9 @@ $(document).ready(function(){
         setLabels:function(label_info){
             var keyCells = this.keyCells;
             for(var i in keyCells){
-                var span = $(keyCells[i].find('span').get(0)),
-                    key = span.attr('data-key');
-                label_info[key] && span.text(label_info[key]);
+                var label = $(keyCells[i].cell.find('a.label:first')),
+                    key = keyCells[i].key;
+                label_info[key] && label.text(label_info[key]);
             }
             var series = this.series;
             for(var i in series){
@@ -166,19 +205,37 @@ $(document).ready(function(){
         }
     };
 
+    function LabelApi(){
+    }
+    LabelApi.prototype._exec = function(url, method, params){
+        var resObj = {}, 
+            res = $.ajax({
+                url: url,
+                async: false,
+                type: method || 'get',
+                data: params,
+                contentType: 'application/json'
+            }).responseText;
+        try {
+            resObj = JSON.parse(res);
+        }catch(e){
+        }
+        return resObj;
+    };
+    LabelApi.prototype.getAll = function(){
+        return LabelApi.prototype._exec("/v1/graph/1/label");
+    };
+    LabelApi.prototype.put = function(graph_id, key, value){
+        var put_data = {};
+        put_data[key] = value;
+        return LabelApi.prototype._exec("/v1/graph/"+(graph_id||'1')+"/label/"+key,'put',JSON.stringify(put_data));
+    };
     /**
      * Business logic
      */
     // Get Label Data
-    var label_info,
-        label_data = $.ajax({
-        url: "/sample.json",
-        async: false
-    }).responseText;
-    try {
-        label_info = JSON.parse(label_data);
-    }catch(e){
-    }
+    var labelApi = new LabelApi(),
+        label_info = labelApi.getAll();
 
     // Get Chart Data
     var t = new ChartTable($('table'),{
@@ -210,7 +267,7 @@ $(document).ready(function(){
     });
 
     // convert from raw key data to label
-    label_info && t.setLabels(label_info.labels);
+    label_info && t.setLabels(label_info);
 
     // Render chart
     var chart = renderChart({
@@ -225,17 +282,6 @@ $(document).ready(function(){
     });
 
     function bindUI(){
-        $('a#label_mngr').on('click',function(e){
-            var elm = $('#labelEditor'),
-                editor = elm.find('div#innerLabelEditor'),
-                html = '';
-
-            editor.html(html);
-            elm.toggle('slide',{},500);
-
-            e.stopImmediatePropagation();
-            e.preventDefault();
-        });
         $('a#show_csv').on('click',function(e){
             opened = window.open('about:blank');
             var doc = opened.document;
@@ -243,10 +289,6 @@ $(document).ready(function(){
             for(var i in t.series){
                 doc.writeln('"'+t.series[i].key+'","'+t.series[i].name+'","'+t.series[i].data.join('","')+'"<br>');
             }
-            e.stopImmediatePropagation();
-            e.preventDefault();
-        });
-        $('a#updateLabel').on('click',function(e){
             e.stopImmediatePropagation();
             e.preventDefault();
         });

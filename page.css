@@ -6,3 +6,17 @@
     height: 135px;
     padding: 0.4em;
 }
+a.link {
+    font-size: small;
+    padding-left: 10px;
+}
+.edit input[type=text] {
+    width: 10em;
+}
+.view div.edit,
+.edit div.view {
+    display: none;
+}
+div.edit, div.view {
+    display:inline-block;
+}
